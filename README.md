@@ -56,6 +56,62 @@ if($conn -> connect_error){
   die('connection failed' . $conn -> connect_error);
 }
 ```
+Также установите свой smtp сервер с почтой, файл server.php
+```
+if ($action === 'reset') {
+        $email = $_POST['email'];
+
+        $stmt = $conn->prepare("SELECT * FROM USER WHERE mail = ?");
+        $stmt->bind_param("s", $email);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        if ($result->num_rows > 0) {
+            $mail_code = bin2hex(random_bytes(3));
+
+            $stmt = $conn->prepare("UPDATE USER SET mail_code = ? WHERE mail = ?");
+            $stmt->bind_param("ss", $mail_code, $email);
+            $stmt->execute();
+
+            // настройка phpmailer
+
+            $mail = new PHPMailer(true);
+            try {
+
+                $mail->isSMTP();
+                $mail->SMTPDebug = 0;
+                $mail->Host = ''; // SMTP хост.
+                $mail->SMTPAuth = true;
+                $mail->Username = ''; // Почта
+                $mail->Password = ''; // Пароль от почты
+                $mail->SMTPSecure = "ssl";
+                $mail->Port = 465; // Порт, смотрите в документации почтового сервиса
+                $mail->CharSet = 'UTF-8';
+
+
+                $mail->setFrom('example@example.com', 'example-noreply'); // ваша корпоративная почта // имя отправителя
+                $mail->addAddress($email);
+
+
+                $mail->isHTML(true);
+                $mail->Subject = "Восстановление пароля";
+                $mail->Body    = '<html><body>';
+                $mail->Body .= '<h1>Восстановление пароля</h1>';
+                $mail->Body .= '<p>Чтобы восстановить пароль, введите данный код на сайте:</p>';
+                $mail->Body .= '<p>' . $mail_code . '</p>';
+                $mail->Body .= '</body></html>';
+
+
+                $mail->send();
+                echo json_encode(['status' => 'success', 'message' => '[!] check your email']);
+            } catch (Exception $e) {
+                echo json_encode(['status' => 'error', 'message' => '[-] err: ' . $mail->ErrorInfo]);
+            }
+        } else {
+            echo json_encode(['status' => 'error', 'message' => '[-] email not found']);
+        }
+    }
+```
 
 
 
